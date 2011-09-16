@@ -26,6 +26,13 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	protected $packages;
 
+	/**
+	 * undocumented class variable
+	 *
+	 * @var string
+	 **/
+	protected $transformation;
+
 
 	/**
 	 * undocumented function
@@ -38,8 +45,9 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	public function transform(DOMDocument $structure, DocBlox_Transformer_Transformation $transformation)
 	{
-		$this->xpath    = new DOMXPath($structure);
-		$this->packages = array();
+		$this->xpath          = new DOMXPath($structure);
+		$this->packages       = array();
+		$this->transformation = $transformation;
 
 		// process the interfaces
 		$interfaces = $this->xpath->query('//interface[full_name]');
@@ -74,9 +82,9 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		$toc  = "API Documentation\n";
 		$toc .= "-----------------\n\n";
 		$toc .= ".. toctree::\n";
-		ksort($packages);
+		ksort($this->packages);
 
-		foreach ($packages as $package => $subpackages) {
+		foreach ($this->packages as $package => $subpackages) {
 			foreach ($subpackages as $subpackage => $elements) {
 				foreach ($elements as $element => $file) {
 					$toc .= "\n\t$package/$subpackage/$element";
@@ -144,20 +152,20 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		if ($description)      $contents .= "\t{$description}\n\n";
 		if ($full_description) $contents .= "\t{$full_description}\n\n";
 
-		foreach ($this->xpath->query('constant', $interface) as $constant) {
+		foreach ($this->xpath->query('constant', $object) as $constant) {
 			$contents .= $this->formatConstant($constant);
 		}
 
-		foreach ($this->xpath->query('property', $interface) as $property) {
+		foreach ($this->xpath->query('property', $object) as $property) {
 			$contents .= $this->formatProperty($property);
 		}
 
-		foreach ($this->xpath->query('method', $interface) as $method) {
+		foreach ($this->xpath->query('method', $object) as $method) {
 			$contents .= $this->formatMethod($method);
 		}
 
 		// output the file
-		$this->file_force_contents($transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . $filename, $contents);
+		$this->file_force_contents($this->transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . $filename, $contents);
 	}
 
 
@@ -171,7 +179,9 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	protected function formatConstant($constant)
 	{
-		return "\t.. php:const:: {$constant->name}\n\n\t\t{$constant->value}\n";
+		$name  = $this->xpath->evaluate('string(name[1])', $constant);
+		$value = $this->xpath->evaluate('string(value[1])', $constant);
+		return "\t.. php:const:: {$name}\n\n\t\t{$value}\n";
 	}
 
 
@@ -185,7 +195,9 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	protected function formatProperty($property)
 	{
-		return "\t.. php:attr:: {$property->name}\n\n\t\t{$property->value}\n";
+		$name  = $this->xpath->evaluate('string(name[1])', $property);
+		$value = $this->xpath->evaluate('string(value[1])', $property);
+		return "\t.. php:attr:: {$name}\n\n\t\t{$value}\n";
 	}
 
 
