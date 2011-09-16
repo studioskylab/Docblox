@@ -19,6 +19,13 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	protected $xpath;
 
+	/**
+	 * undocumented class variable
+	 *
+	 * @var array
+	 **/
+	protected $packages;
+
 
 	/**
 	 * undocumented function
@@ -31,91 +38,19 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 **/
 	public function transform(DOMDocument $structure, DocBlox_Transformer_Transformation $transformation)
 	{
-		$this->xpath = new DOMXPath($structure);
-		$packages    = array();
+		$this->xpath    = new DOMXPath($structure);
+		$this->packages = array();
 
 		// process the interfaces
 		$interfaces = $this->xpath->query('//interface[full_name]');
-
 		foreach ($interfaces as $interface) {
-			$package          = $this->xpath->query('docblock/tag[@name="package"]', $interface->parentNode);
-			$package          = ($package->length ? (string) $package->item(0)->getAttribute('description') : 'NONE');
-			$subpackage       = $this->xpath->query('docblock/tag[@name="subpackage"]', $interface->parentNode);
-			$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : 'NONE');
-			$name             = $this->xpath->evaluate('string(name[1])', $interface);
-			$description      = $this->xpath->evaluate('string(docblock/description[1])', $interface);
-			$full_description = $this->xpath->evaluate('string(docblock/full_description[1])', $interface);
-
-			// generate the file name
-			$filename = $package . DIRECTORY_SEPARATOR . $subpackage . DIRECTORY_SEPARATOR . $name . '.rst';
-
-			// register the file
-			$packages[$package][$subpackage][$name] = $filename;
-
-			// build the file contents
-			$contents  = $name . "\n";
-			$contents .= str_repeat('-', mb_strlen($name)) . "\n";
-			$contents .= ".. php:interface:: {$name}\n\n";
-
-			if ($description)      $contents .= "\t{$description}\n\n";
-			if ($full_description) $contents .= "\t{$full_description}\n\n";
-
-			foreach ($this->xpath->query('constant', $interface) as $constant) {
-				$contents .= $this->formatConstant($constant);
-			}
-
-			foreach ($this->xpath->query('property', $interface) as $property) {
-				$contents .= $this->formatProperty($property);
-			}
-
-			foreach ($this->xpath->query('method', $interface) as $method) {
-				$contents .= $this->formatMethod($method);
-			}
-
-			// output the file
-			$this->file_force_contents($transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . $filename, $contents);
+			$this->formatInterface($interface);
 		}
 
 		// process the classes
 		$classes = $this->xpath->query('//class[full_name]');
-
 		foreach ($classes as $class) {
-			$package          = $this->xpath->query('docblock/tag[@name="package"]', $class->parentNode);
-			$package          = ($package->length ? (string) $package->item(0)->getAttribute('description') : 'NONE');
-			$subpackage       = $this->xpath->query('docblock/tag[@name="subpackage"]', $class->parentNode);
-			$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : 'NONE');
-			$name             = $this->xpath->evaluate('string(name[1])', $class);
-			$description      = $this->xpath->evaluate('string(docblock/description[1])', $class);
-			$full_description = $this->xpath->evaluate('string(docblock/full_description[1])', $class);
-
-			// generate the file name
-			$filename = $package . DIRECTORY_SEPARATOR . $subpackage . DIRECTORY_SEPARATOR . $name . '.rst';
-
-			// register the file
-			$packages[$package][$subpackage][$name] = $filename;
-
-			// build the file contents
-			$contents  = $name . "\n";
-			$contents .= str_repeat('-', mb_strlen($name)) . "\n";
-			$contents .= ".. php:class:: {$name}\n\n";
-
-			if ($description)      $contents .= "\t{$description}\n\n";
-			if ($full_description) $contents .= "\t{$full_description}\n\n";
-
-			foreach ($this->xpath->query('constant', $interface) as $constant) {
-				$contents .= $this->formatConstant($constant);
-			}
-
-			foreach ($this->xpath->query('property', $interface) as $property) {
-				$contents .= $this->formatProperty($property);
-			}
-
-			foreach ($this->xpath->query('method', $interface) as $method) {
-				$contents .= $this->formatMethod($method);
-			}
-
-			// output the file
-			$this->file_force_contents($transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . $filename, $contents);
+			$this->formatClass($class);
 		}
 
 		/* @todo
@@ -150,6 +85,79 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		}
 
 		$this->file_force_contents($transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . 'index.rst', $toc);
+	}
+
+
+	/**
+	 * undocumented function
+	 *
+	 * @param DOMElement $class
+	 * @return void
+	 * @author Jaik Dean
+	 **/
+	protected function formatClass($class)
+	{
+		$this->formatObject($class, 'class');
+	}
+
+
+	/**
+	 * undocumented function
+	 *
+	 * @param DOMElement $interface
+	 * @return void
+	 * @author Jaik Dean
+	 **/
+	protected function formatInterface($interface)
+	{
+		$this->formatObject($interface, 'interface');
+	}
+
+
+	/**
+	 * undocumented function
+	 *
+	 * @return void
+	 * @author Jaik Dean
+	 **/
+	protected function formatObject($object, $type = 'class')
+	{
+		$package          = $this->xpath->query('docblock/tag[@name="package"]', $object->parentNode);
+		$package          = ($package->length ? (string) $package->item(0)->getAttribute('description') : 'NONE');
+		$subpackage       = $this->xpath->query('docblock/tag[@name="subpackage"]', $object->parentNode);
+		$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : 'NONE');
+		$name             = $this->xpath->evaluate('string(name[1])', $object);
+		$description      = $this->xpath->evaluate('string(docblock/description[1])', $object);
+		$full_description = $this->xpath->evaluate('string(docblock/full_description[1])', $object);
+
+		// generate the file name
+		$filename = $package . DIRECTORY_SEPARATOR . $subpackage . DIRECTORY_SEPARATOR . $name . '.rst';
+
+		// register the file
+		$this->packages[$package][$subpackage][$name] = $filename;
+
+		// build the file contents
+		$contents  = $name . "\n";
+		$contents .= str_repeat('-', mb_strlen($name)) . "\n\n";
+		$contents .= ".. php:{$type}:: {$name}\n\n";
+
+		if ($description)      $contents .= "\t{$description}\n\n";
+		if ($full_description) $contents .= "\t{$full_description}\n\n";
+
+		foreach ($this->xpath->query('constant', $interface) as $constant) {
+			$contents .= $this->formatConstant($constant);
+		}
+
+		foreach ($this->xpath->query('property', $interface) as $property) {
+			$contents .= $this->formatProperty($property);
+		}
+
+		foreach ($this->xpath->query('method', $interface) as $method) {
+			$contents .= $this->formatMethod($method);
+		}
+
+		// output the file
+		$this->file_force_contents($transformation->getTransformer()->getTarget() . DIRECTORY_SEPARATOR . $filename, $contents);
 	}
 
 
@@ -206,10 +214,15 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		}
 
 		$method_name      = $this->xpath->evaluate('string(name[1])', $method) . "($args)";
-		$description      = $this->xpath->evaluate('string(description[1])', $method);
-		$full_description = $this->xpath->evaluate('string(full_description[1])', $method);
+		$description      = str_replace(array("\n","\r"), ' ', $this->xpath->evaluate('string(docblock/description[1])', $method));
+		$full_description = str_replace(array("\n","\r"), ' ', $this->xpath->evaluate('string(docblock/full_description[1])', $method));
 
-		$contents = "\t.. php:method:: {$method_name}\n\n";
+		if ($method->getAttribute('static') == 'true') {
+			$contents = "\t.. php:staticmethod:: {$method_name}\n\n";
+		} else {
+			$contents = "\t.. php:method:: {$method_name}\n\n";
+		}
+
 		if ($description)      $contents .= "\t\t" . $description . "\n\n";
 		if ($full_description) $contents .= "\t\t" . $full_description . "\n\n";
 
@@ -218,7 +231,10 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		}
 
 		$return = $this->xpath->query('docblock/tag[@name=return]', $method);
-		if ($return->length) $contents .= "\t\t:returns: {$return->item(0)->getAttribute('description')}\n\n";
+		if ($return->length) {
+			$contents .= "\t\t:returns: {$return->item(0)->getAttribute('description')}\n";
+			$contents .= "\t\t:rtype: {$return->item(0)->getAttribute('type')}\n\n";
+		}
 
 		return "$contents\n\n";
 	}
