@@ -135,8 +135,8 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		$subpackage       = $this->xpath->query('docblock/tag[@name="subpackage"]', $object->parentNode);
 		$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : 'NONE');
 		$name             = $this->xpath->evaluate('string(name[1])', $object);
-		$description      = $this->xpath->evaluate('string(docblock/description[1])', $object);
-		$full_description = $this->xpath->evaluate('string(docblock/full_description[1])', $object);
+		$description      = $this->formatDescription($this->xpath->evaluate('string(docblock/description[1])', $object), 1);
+		$full_description = $this->formatDescription($this->xpath->evaluate('string(docblock/full_description[1])', $object), 1);
 
 		// generate the file name
 		$filename = $package . DIRECTORY_SEPARATOR . $subpackage . DIRECTORY_SEPARATOR . $name . '.rst';
@@ -226,8 +226,8 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		}
 
 		$method_name      = $this->xpath->evaluate('string(name[1])', $method) . "($args)";
-		$description      = str_replace(array("\n","\r"), ' ', $this->xpath->evaluate('string(docblock/description[1])', $method));
-		$full_description = str_replace(array("\n","\r"), ' ', $this->xpath->evaluate('string(docblock/full_description[1])', $method));
+		$description      = $this->formatDescription($this->xpath->evaluate('string(docblock/description[1])', $method), 2);
+		$full_description = $this->formatDescription($this->xpath->evaluate('string(docblock/full_description[1])', $method), 2);
 
 		if ($method->getAttribute('static') == 'true') {
 			$contents = "\t.. php:staticmethod:: {$method_name}\n\n";
@@ -267,6 +267,37 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		$description = $this->xpath->evaluate('string(description[1])', $argument);
 
 		return "\t\t:param {$type} {$name}: {$description}\n";
+	}
+
+
+	/**
+	 * undocumented function
+	 *
+	 * @param string $description
+	 * @param int $indentation Indentation level for the start of new lines
+	 * @return string
+	 * @author Jaik Dean
+	 **/
+	protected function formatDescription($description, $indentation = 1)
+	{
+		$in = str_repeat("\t", $indentation);
+
+		// trim
+		$description = trim($description);
+
+		// add indentation to any new lines
+		$description = preg_replace('/\\n|\\r/', "\n$in", $description);
+
+		// reformat link tags to attributes
+		$description = preg_replace('/{@link ([^}:]+)::$([^}]+)}/', ':php:attr:`$1::$$2`', $description);
+
+		// reformat link tags to methods
+		$description = preg_replace('/{@link ([^}:]+)::([^}]+)(\(\))?}/', ':php:meth:`$1::$2()`', $description);
+
+		// reformat link tags to classes
+		$description = preg_replace('/{@link ([^}]+)}/', ':php:class:`$1`', $description);
+
+		return $description;
 	}
 
 
