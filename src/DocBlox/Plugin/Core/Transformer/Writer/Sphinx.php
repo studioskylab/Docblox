@@ -255,11 +255,11 @@ class DocBlox_Plugin_Core_Transformer_Writer_Sphinx
 		if ($full_description) $contents .= "\t\t" . $full_description . "\n\n";
 
 		foreach ($method->getElementsByTagName('argument') as $argument) {
-			$tags = $this->xpath->query('docblock/tag[@name=param][@variable="' + $this->xpath->evaluate('string(name[1])', $argument) + '"]', $method);
+			$tags = $this->xpath->query("docblock/tag[@name='param'][@variable='" . $this->xpath->evaluate('string(name[1])', $argument) . "']", $method);
 			$contents .= $this->formatArgument($argument, $tags->item(0));
 		}
 
-		$return = $this->xpath->query('docblock/tag[@name=return]', $method);
+		$return = $this->xpath->query("docblock/tag[@name='return']", $method);
 		if ($return->length) {
 			$contents .= "\t\t:returns: {$return->item(0)->getAttribute('description')}\n";
 			$contents .= "\t\t:rtype: {$return->item(0)->getAttribute('type')}\n\n";
@@ -282,7 +282,8 @@ class DocBlox_Plugin_Core_Transformer_Writer_Sphinx
 	{
 		$type        = $this->xpath->evaluate('string(type[1])', $argument);
 		$name        = $this->xpath->evaluate('string(name[1])', $argument);
-		$description = ($tag ? $this->formatDescription($tag->getAttribute('description'), 3) : '');
+		if (is_object($tag)) var_dump($tag->getAttribute('description'));
+		$description = (is_object($tag) ? $this->formatDescription($tag->getAttribute('description'), 3) : '');
 
 		return "\t\t:param {$type} {$name}: {$description}\n";
 	}
