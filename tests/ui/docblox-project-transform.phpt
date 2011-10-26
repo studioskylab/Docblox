@@ -2,25 +2,12 @@
 docblox project:transform
 --FILE--
 <?php
-$_SERVER['argc']    = 2;
+$_SERVER['argc']    = 3;
 $_SERVER['argv'][1] = 'project:transform';
 $_SERVER['argv'][2] = '--config';
 $_SERVER['argv'][3] = 'none';
 
-// determine base include folder, if @php_bin@ contains @php_bin then we do not install via PEAR
-if (strpos('@php_bin@', '@php_bin') === 0) {
-    set_include_path(dirname(__FILE__) . PATH_SEPARATOR . get_include_path());
-}
-
-if (!class_exists('Zend_Loader_Autoloader'))
-{
-  require_once 'Zend/Loader/Autoloader.php';
-}
-$autoloader = Zend_Loader_Autoloader::getInstance();
-$autoloader->registerNamespace('DocBlox_');
-
-$application = new DocBlox_Core_Application();
-$application->main();
+require_once 'tests/common/ui-include.php';
 ?>
 --EXPECTF--
 DocBlox version %s
@@ -44,3 +31,4 @@ Usage:
 --template [STRING]    Name of the template to use (optional, defaults to "default")
 -v [--verbose]         Outputs any information collected by this application, may slow down the process slightly
 --parseprivate         Whether to parse DocBlocks marked with @internal tag
+-p [--progressbar]     Whether to show a progress bar; will automatically quiet logging to stdout

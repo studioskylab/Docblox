@@ -24,28 +24,42 @@ if (extension_loaded('xhprof')) {
     }
 }
 
-// determine base include folder, if @php_bin@ contains @php_bin then we do not install via PEAR
-$base_include_folder = (strpos('@php_dir@', '@php_dir') === 0)
-  ? dirname(__FILE__) . '/../src'
-  : '@php_dir@/DocBlox/src';
+// determine base include folder, if @php_dir@ contains @php_dir then
+// we did not install via PEAR
+$bootstrap_folder = (strpos('@php_dir@', '@php_dir') === 0)
+    ? dirname(__FILE__) . '/../src'
+    : '@php_dir@/DocBlox/src';
 
-// set path to add lib folder, load the Zend Autoloader
-set_include_path($base_include_folder . PATH_SEPARATOR . get_include_path());
+require($bootstrap_folder . '/DocBlox/Bootstrap.php');
 
-require_once $base_include_folder.'/ZendX/Loader/StandardAutoloader.php';
-$autoloader = new ZendX_Loader_StandardAutoloader(
-    array(
-        'prefixes' => array(
-            'Zend'    => $base_include_folder.'/Zend',
-            'DocBlox' => $base_include_folder.'/DocBlox'
-        ),
-        'fallback_autoloader' => true
-    )
-);
-$autoloader->register();
+$autoloader = DocBlox_Bootstrap::createInstance()->registerAutoloader();
 
-$application = new DocBlox_Core_Application();
-$application->main();
+$task_name = ($_SERVER['argc'] == 1) ? false : $_SERVER['argv'][1];
+$runner    = new DocBlox_Task_Runner($task_name, 'project:run');
+$task      = $runner->getTask();
+
+if (!$task->getQuiet() && (!$task->getProgressbar())) {
+    DocBlox_Core_Abstract::renderVersion();
+} else {
+    DocBlox_Core_Abstract::config()->logging->level = 'quiet';
+}
+if ($task->getVerbose()) {
+    DocBlox_Core_Abstract::config()->logging->level = 'debug';
+}
+
+// the plugins are registered here because the DocBlox_Task can load a
+// custom configuration; which is needed by this registration
+DocBlox_Bootstrap::createInstance()->registerPlugins($autoloader);
+
+try {
+    $task->execute();
+} catch (Exception $e) {
+    if (!$task->getQuiet()) {
+        echo 'ERROR: ' . $e->getMessage() . PHP_EOL . PHP_EOL;
+        echo $task->getUsageMessage();
+    }
+    die(1);
+}
 
 if (false !== $profile) {
     include_once 'XHProf/utils/xhprof_lib.php';

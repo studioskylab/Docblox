@@ -7,20 +7,8 @@ $_SERVER['argv'][1] = 'project:parse';
 $_SERVER['argv'][2] = '--config';
 $_SERVER['argv'][3] = 'none';
 
-// determine base include folder, if @php_bin@ contains @php_bin then we do not install via PEAR
-if (strpos('@php_bin@', '@php_bin') === 0) {
-    set_include_path(dirname(__FILE__) . PATH_SEPARATOR . get_include_path());
-}
+require_once 'tests/common/ui-include.php';
 
-if (!class_exists('Zend_Loader_Autoloader'))
-{
-  require_once 'Zend/Loader/Autoloader.php';
-}
-$autoloader = Zend_Loader_Autoloader::getInstance();
-$autoloader->registerNamespace('DocBlox_');
-
-$application = new DocBlox_Core_Application();
-$application->main();
 ?>
 --EXPECTF--
 DocBlox version %s
@@ -48,3 +36,5 @@ Usage:
 --validate                    Validates every processed file using PHP Lint, costs a lot of performance
 --visibility [STRING]         Specifies the parse visibility that should be displayed in the documentation (comma seperated e.g. "public,protected")
 --defaultpackagename [STRING] name to use for the default package.  If not specified, uses "default"
+--sourcecode                  Whether to include syntax highlighted source code
+-p [--progressbar]            Whether to show a progress bar; will automatically quiet logging to stdout

@@ -27,7 +27,7 @@
 abstract class DocBlox_Core_Abstract
 {
     /** @var string The actual version number of DocBlox. */
-    const VERSION = '0.14.0';
+    const VERSION = '0.15.1';
 
     /**
      * The logger used to capture all messages send by the log method.
@@ -295,7 +295,9 @@ abstract class DocBlox_Core_Abstract
     /**
      * Set a custom DocBlox configuration
      *
-     * @param DocBlox_Core_Config $config
+     * @param DocBlox_Core_Config $config Configuration file to use in the project.
+     *
+     * @return void
      */
     public static function setConfig(DocBlox_Core_Config $config)
     {
@@ -303,7 +305,9 @@ abstract class DocBlox_Core_Abstract
     }
 
     /**
-     * Reset the configuration
+     * Reset the configuration.
+     *
+     * @return void
      */
     public static function resetConfig()
     {
@@ -324,5 +328,17 @@ abstract class DocBlox_Core_Abstract
         }
 
         return self::$config;
+    }
+
+    /**
+     * Returns the version header.
+     *
+     * @return string
+     */
+    public static function renderVersion()
+    {
+        echo 'DocBlox version ' . DocBlox_Core_Abstract::VERSION
+             . PHP_EOL
+             . PHP_EOL;
     }
 }

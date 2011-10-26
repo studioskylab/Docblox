@@ -334,6 +334,16 @@ class DocBlox_Reflection_File extends DocBlox_Reflection_DocBlockedAbstract
     }
 
     /**
+     * Returns the file's contents.
+     *
+     * @return string
+     */
+    public function getContents()
+    {
+        return $this->contents;
+    }
+
+    /**
      * Returns all classes in this file.
      *
      * @return DocBlox_Reflection_Class
@@ -456,22 +466,19 @@ class DocBlox_Reflection_File extends DocBlox_Reflection_DocBlockedAbstract
             $result = $docblock
                 ? new DocBlox_Reflection_DocBlock($docblock->content)
                 : null;
+
+            if ($result) {
+                // attach line number to class, the DocBlox_Reflection_DocBlock does not know the number
+                $result->line_number = $docblock->line_number;
+            }
         }
         catch (Exception $e) {
             $this->log($e->getMessage(), Zend_Log::CRIT);
         }
 
-        // TODO: add a check if a class immediately follows this docblock, if so
-        // this is not a page level docblock but a class docblock
-        $valid = $this->validateDocBlock(
-            $this->filename,
-            $docblock ? $docblock->getLineNumber() : 0,
-            $result
-        );
-
-        if (!$valid) {
-            $result = null;
-        }
+        $this->dispatch('reflection.docblock-extraction.post', array(
+            'docblock' => $result
+        ));
 
         return $result;
     }
@@ -785,11 +792,14 @@ class DocBlox_Reflection_File extends DocBlox_Reflection_DocBlockedAbstract
     }
 
     /**
-     * Converts this file definition into a DocBlox compatible XML text.
+     * Returns the contents' structure as DOMDocument.
      *
-     * @return string
+     * This is a temporary method as the XML processing should be removed from
+     * the reflection library and brought into the DocBlox parser itself.
+     *
+     * @return DOMDocument
      */
-    public function __toXml()
+    public function __toDomXml()
     {
         $xml = new SimpleXMLElement(
             '<file path="' . ltrim($this->filename, './') . '" hash="'
@@ -835,9 +845,11 @@ class DocBlox_Reflection_File extends DocBlox_Reflection_DocBlockedAbstract
             $this->mergeXmlToDomDocument($dom, trim($include->__toXml()));
         }
         foreach ($this->constants as $constant) {
+            $constant->setDefaultPackageName($xml['package']);
             $this->mergeXmlToDomDocument($dom, trim($constant->__toXml()));
         }
         foreach ($this->functions as $function) {
+            $function->setDefaultPackageName($xml['package']);
             $this->mergeXmlToDomDocument($dom, trim($function->__toXml()));
         }
         foreach ($this->interfaces as $interface) {
@@ -847,7 +859,17 @@ class DocBlox_Reflection_File extends DocBlox_Reflection_DocBlockedAbstract
             $this->mergeXmlToDomDocument($dom, trim($class->__toXml()));
         }
 
-        return trim($dom->saveXml());
+        return $dom;
+    }
+
+    /**
+     * Converts this file definition into a DocBlox compatible XML text.
+     *
+     * @return string
+     */
+    public function __toXml()
+    {
+       return trim($this->__toDomXml()->saveXml());
     }
 
 }

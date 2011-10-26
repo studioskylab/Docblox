@@ -22,6 +22,9 @@
  * @author      Mike van Riel <mike.vanriel@naenius.com>
  * @license     http://www.opensource.org/licenses/mit-license.php MIT
  * @link        http://docblox-project.org
+ *
+ * @method boolean getSourcecode() flag indicating whether the source code needs
+ *  to be parsed as well.
  */
 class DocBlox_Task_Project_Parse extends DocBlox_Task_Abstract
 {
@@ -82,6 +85,15 @@ class DocBlox_Task_Project_Parse extends DocBlox_Task_Abstract
         $this->addOption(
             'defaultpackagename', '-s',
             'name to use for the default package.  If not specified, uses "default"'
+        );
+        $this->addOption(
+            'sourcecode', '',
+            'Whether to include syntax highlighted source code'
+        );
+        $this->addOption(
+            'p|progressbar', '',
+            'Whether to show a progress bar; will automatically quiet logging '
+            . 'to stdout'
         );
     }
 
@@ -208,6 +220,16 @@ class DocBlox_Task_Project_Parse extends DocBlox_Task_Abstract
         return DocBlox_Core_Abstract::config()->getArrayFromPath('parser/markers/item');
     }
 
+    public function echoProgress(sfEvent $event)
+    {
+        echo '.';
+        if (($event['progress'][0] % 70 == 0)
+            || ($event['progress'][0] % $event['progress'][1] == 0)
+        ) {
+            echo ' ' . $event['progress'][0] . '/' . $event['progress'][1] . PHP_EOL;
+        }
+    }
+
     /**
      * Execute the parsing process.
      *
@@ -217,6 +239,13 @@ class DocBlox_Task_Project_Parse extends DocBlox_Task_Abstract
      */
     public function execute()
     {
+        if ($this->getProgressbar()) {
+            DocBlox_Parser_Abstract::$event_dispatcher->connect(
+                'parser.file.pre', array($this, 'echoProgress')
+            );
+            $this->setQuiet(true);
+        }
+
         $files = new DocBlox_Parser_Files();
         $files->setAllowedExtensions($this->getExtensions());
         $files->setIgnorePatterns($this->getIgnore());
@@ -249,7 +278,10 @@ class DocBlox_Task_Project_Parse extends DocBlox_Task_Abstract
 
         try {
             // save the generate file to the path given as the 'target' option
-            file_put_contents($this->getTarget() . '/structure.xml', $parser->parseFiles($files));
+            file_put_contents(
+                $this->getTarget() . '/structure.xml',
+                $parser->parseFiles($files, $this->getSourcecode())
+            );
         } catch (Exception $e) {
             if ($e->getCode() === DocBlox_Parser_Exception::NO_FILES_FOUND)
             {
