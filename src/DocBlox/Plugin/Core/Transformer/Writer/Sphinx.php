@@ -147,15 +147,15 @@ class DocBlox_Plugin_Core_Transformer_Writer_Sphinx
 	protected function formatObject($object, $type = 'class')
 	{
 		$package          = $this->xpath->query('docblock/tag[@name="package"]', $object->parentNode);
-		$package          = ($package->length ? (string) $package->item(0)->getAttribute('description') : 'NONE');
+		$package          = ($package->length ? (string) $package->item(0)->getAttribute('description') : '');
 		$subpackage       = $this->xpath->query('docblock/tag[@name="subpackage"]', $object->parentNode);
-		$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : 'NONE');
+		$subpackage       = ($subpackage->length ? (string) $subpackage->item(0)->getAttribute('description') : '');
 		$name             = $this->xpath->evaluate('string(name[1])', $object);
 		$description      = $this->formatDescription($this->xpath->evaluate('string(docblock/description[1])', $object), 1);
 		$full_description = $this->formatDescription($this->xpath->evaluate('string(docblock/full_description[1])', $object), 1);
 
 		// generate the file name
-		$filename = $package . DIRECTORY_SEPARATOR . $subpackage . DIRECTORY_SEPARATOR . $name . '.rst';
+		$filename = (empty($package) ? '' : $package . DIRECTORY_SEPARATOR) . (empty($subpackage) ? '' : $subpackage . DIRECTORY_SEPARATOR) . $name . '.rst';
 
 		// register the file
 		$this->packages[$package][$subpackage][$name] = $filename;
@@ -256,7 +256,6 @@ class DocBlox_Plugin_Core_Transformer_Writer_Sphinx
 
 		foreach ($method->getElementsByTagName('argument') as $argument) {
 			$tags = $this->xpath->query('docblock/tag[@name=param][@variable="' + $this->xpath->evaluate('string(name[1])', $argument) + '"]', $method);
-			var_dump($tags);
 			$contents .= $this->formatArgument($argument, $tags->item(0));
 		}
 
