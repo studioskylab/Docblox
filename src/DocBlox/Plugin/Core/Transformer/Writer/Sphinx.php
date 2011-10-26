@@ -1,15 +1,31 @@
 <?php
+/**
+ * Checkstyle Transformer File
+ *
+ * PHP Version 5
+ *
+ * @category   DocBlox
+ * @package    Transformer
+ * @subpackage Writers
+ * @author     Jaik Dean <jaik@studioskylab.com>
+ * @copyright  2010-2011 Mike van Riel / Naenius (http://www.naenius.com)
+ * @license    http://www.opensource.org/licenses/mit-license.php MIT
+ * @link       http://docblox-project.org
+ */
 
 /**
  * Sphinx transformation writer; generates Sphinx PHP Domain-compatible rst
  * files for incorporation into a Sphinx documentation project
  *
- * @category DocBlox
- * @package  Writers
- * @author   Jaik Dean <jaik@studioskylab.com>
- * @license  http://www.opensource.org/licenses/mit-license.php MIT
+ * @category   DocBlox
+ * @package    Transformer
+ * @subpackage Writers
+ * @author     Jaik Dean <jaik@studioskylab.com>
+ * @license    http://www.opensource.org/licenses/mit-license.php MIT
+ * @link       http://docblox-project.org
  */
-class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstract
+class DocBlox_Plugin_Core_Transformer_Writer_Sphinx
+    extends DocBlox_Transformer_Writer_Abstract
 {
 
 	/**
@@ -239,7 +255,9 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 		if ($full_description) $contents .= "\t\t" . $full_description . "\n\n";
 
 		foreach ($method->getElementsByTagName('argument') as $argument) {
-			$contents .= $this->formatArgument($argument);
+			$tags = $this->xpath->query('docblock/tag[@name=param][@variable="' + $this->xpath->evaluate('string(name[1])', $argument) + '"]', $method);
+			var_dump($tags);
+			$contents .= $this->formatArgument($argument, $tags->item(0));
 		}
 
 		$return = $this->xpath->query('docblock/tag[@name=return]', $method);
@@ -257,14 +275,15 @@ class DocBlox_Transformer_Writer_Sphinx extends DocBlox_Transformer_Writer_Abstr
 	 * function/method argument
 	 *
 	 * @param DOMElement $argument
+	 * @param DOMElement $tag
 	 * @return string
 	 * @author Jaik Dean
 	 **/
-	protected function formatArgument($argument)
+	protected function formatArgument($argument, $tag = false)
 	{
 		$type        = $this->xpath->evaluate('string(type[1])', $argument);
 		$name        = $this->xpath->evaluate('string(name[1])', $argument);
-		$description = $this->xpath->evaluate('string(description[1])', $argument);
+		$description = ($tag ? $this->formatDescription($tag->getAttribute('description'), 3) : '');
 
 		return "\t\t:param {$type} {$name}: {$description}\n";
 	}
